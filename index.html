@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Exploring Visual Representations for World–Action Models</title>
+  <meta name="description" content="Which visual space should a world–action model act on? Representation latents make a better state than reconstruction latents, and a second space helps as a training target rather than as an input.">
+  <meta property="og:title" content="Exploring Visual Representations for World–Action Models">
+  <meta property="og:description" content="A controlled study of the visual state of world–action models, scaled to 24,000 hours of robot data.">
+  <meta property="og:image" content="static/images/teaser-poster.jpg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="static/css/style.css">
+</head>
+<body>
+
+<div class="page">
+
+<nav class="toc" aria-label="Contents">
+  <p>Contents</p>
+  <a href="#overview" class="active">Overview</a>
+  <a href="#setup"><span class="num">§2</span>Setup</a>
+  <a href="#measure"><span class="num">§3</span>The loss</a>
+  <a href="#represent"><span class="num">§4</span>Single spaces</a>
+  <a href="#align"><span class="num">§5</span>Two spaces</a>
+  <a href="#scale"><span class="num">§6</span>Scale</a>
+  <a href="#faq">FAQ</a>
+  <a href="#bibtex">Citation</a>
+</nav>
+
+<main>
+
+<header class="hero">
+  <h1>Exploring Visual Representations for World–Action Models</h1>
+  <p class="authors">
+    <span>Jiacheng Dong<sup>1,2,5</sup></span>
+    <span>Lin-Zhuo Chen<sup>3,5</sup></span>
+    <span>Fangyi Xu<sup>5</sup></span>
+    <span>Jiayi Zhang<sup>4</sup></span>
+    <span>Kecheng Zheng<sup>5</sup></span>
+    <span>Yinghao Xu<sup>1*</sup></span>
+  </p>
+  <p class="affil">
+    <span><sup>1</sup>HKUST</span><span><sup>2</sup>UIUC</span><span><sup>3</sup>Nanjing University</span>
+    <span><sup>4</sup>University of Nottingham</span><span><sup>5</sup>Robbyant, Ant Group</span>
+  </p>
+  <p class="note">*Corresponding author</p>
+  <div class="links">
+    <a class="btn soon" title="Link at release" aria-disabled="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h9l5 5v15a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zm8 1.5V8h4.5L14 3.5zM8 12h8v1.6H8V12zm0 3.4h8V17H8v-1.6z"/></svg>arXiv</a>
+    <a class="btn soon" title="Link at release" aria-disabled="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h10l4 4v14H5V3zm9 1.5V8h3.5L14 4.5zM11 10v5.2l-2-2-1.1 1.1L12 18.4l4.1-4.1-1.1-1.1-2 2V10h-2z"/></svg>PDF</a>
+    <a class="btn" href="#teaser"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 1 0 20 10 10 0 0 1 0-20zm-2 6v8l6-4-6-4z"/></svg>Video</a>
+    <a class="btn" href="#bibtex"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 7h5v5c0 3-1.6 5.2-4.4 6l-.8-1.6C7.6 15.8 8.4 14.6 8.5 13H6V7zm8 0h5v5c0 3-1.6 5.2-4.4 6l-.8-1.6c1.8-.6 2.6-1.8 2.7-3.4H14V7z"/></svg>BibTeX</a>
+  </div>
+  <div class="teaser wide" id="teaser">
+    <video src="static/videos/teaser.mp4" poster="static/images/teaser-poster.jpg" controls muted playsinline preload="metadata"></video>
+  </div>
+</header>
+
+<!-- ======================= Overview ======================= -->
+<section class="overview col" id="overview">
+  <p class="lede">Most world–action models act on the latent space of the video generator they are initialized
+    from: a reconstruction latent, from which the image can be redrawn. Is it a good state for a model trained from
+    scratch, or do the features of pretrained representation encoders serve it better? We train the same
+    world–action model from scratch on six visual spaces and on pairs of them, change nothing but the visual
+    state, and evaluate every configuration in and out of domain. <a href="#setup">§2 Setup ↓</a></p>
+
+  <h3>What we find</h3>
+  <ol class="finds">
+    <li><span class="n">S1</span><b>The loss does not measure generalization.</b> The action loss on held-out robot
+      data tracks in-domain success (<i>r</i>&nbsp;=&nbsp;−0.80) more closely than out-of-domain success
+      (<i>r</i>&nbsp;=&nbsp;−0.53), so we judge generalization out of domain.
+      <a class="go" href="#measure">§3 ↓</a></li>
+    <li><span class="n">S2</span><b>Represent, don't reconstruct.</b> Representation latents make a better state than
+      reconstruction latents, most of all out of domain: in randomized RoboTwin scenes, the two reconstruction
+      latents succeed in 1% of episodes, the four representation latents in 6% to 22%.
+      <a class="go" href="#represent">§4 ↓</a></li>
+    <li><span class="n">S3</span><b>Align to a second space.</b> A second space helps as a training target rather than
+      as an input. Aligning couplings improve on both spaces out of domain with every second space; input
+      couplings follow the second space and inherit a weak one's failures.
+      <a class="go" href="#align">§5 ↓</a></li>
+    <li><span class="n">S4</span><b>Scale the recipe.</b> Pretrained on about 24,000 hours of robot data, a
+      representation latent aligned to a second space by Feature Forcing outperforms either space alone, achieves
+      state-of-the-art results on RoboTwin, RoboCasa, and RoboDojo, and outperforms π<sub>0.5</sub> on a real robot.
+      <a class="go" href="#scale">§6 ↓</a></li>
+  </ol>
+  <p class="thesis">A world–action model should act on a representation latent, and add a second space as a
+    training target, not as an input.</p>
+</section>
+
+<!-- ======================= §2 Setup ======================= -->
+<section class="part" id="setup">
+  <div class="col">
+    <p class="kicker"><span class="sec">§2</span>What changes, and what stays fixed?</p>
+    <h2>Only the visual state changes</h2>
+    <p>Each training sample, a window, holds the current frame, two blocks of four future frames, and the 32-step
+      action chunk over the same span. A frozen encoder turns the frames into states. A world Transformer learns to
+      denoise the future states, and an action expert, which reads the world Transformer at every layer, learns to
+      denoise the actions. At inference the future positions hold pure noise: the world Transformer runs once, and
+      the action expert denoises the action chunk in ten steps, without decoding any image.</p>
+  </div>
+  <div class="fig wide reveal">
+    <div class="head"><span class="title">The world–action model</span></div>
+    <div class="chart" id="fig-model"></div>
+    <p class="cap col">Hover a part to see what it does. The encoder is frozen; the world Transformer
+      (30 layers, about 5.0B parameters) and the action expert (30 layers, about 1.0B) are trained from scratch.</p>
+  </div>
+  <div class="col">
+    <p>Every configuration shares this architecture, the training data, the number of training steps, and the
+      action objective. Only the encoder changes, and, for a pair of spaces, how the model uses the second one. We
+      compare two reconstruction latents with four representation latents.</p>
+  </div>
+  <div class="fig wide reveal">
+    <div class="spaces" id="spaces"></div>
+  </div>
+  <div class="col">
+    <p>Every policy is evaluated in closed loop, in and out of domain. RoboTwin&nbsp;2.0 policies train on clean
+      scenes and are tested in clean and in domain-randomized scenes, 100 episodes for each of 50 tasks. LIBERO
+      policies are tested on the original tasks and on the 10,030 tasks of LIBERO-Plus, which changes one factor
+      at a time.</p>
+  </div>
+  <div class="fig wide reveal">
+    <div class="frames rt">
+      <div class="grp"><span class="in">RoboTwin 2.0</span> · in domain, then out of domain</div>
+      <figure><img src="static/images/frames/robotwin_clean.jpg" alt="Clean RoboTwin scene" loading="lazy"><figcaption>Clean</figcaption></figure>
+      <figure><img src="static/images/frames/robotwin_randomized_1.jpg" alt="Randomized RoboTwin scene" loading="lazy"><figcaption>Randomized</figcaption></figure>
+      <figure><img src="static/images/frames/robotwin_randomized_2.jpg" alt="Randomized RoboTwin scene" loading="lazy"><figcaption>Randomized</figcaption></figure>
+      <figure><img src="static/images/frames/robotwin_randomized_3.jpg" alt="Randomized RoboTwin scene" loading="lazy"><figcaption>Randomized</figcaption></figure>
+    </div>
+    <div class="frames lb" style="margin-top:10px">
+      <div class="grp"><span class="in">LIBERO</span> · the original task, then the seven LIBERO-Plus categories</div>
+      <figure><img src="static/images/frames/libero_original.jpg" alt="Original LIBERO task" loading="lazy"><figcaption>Original</figcaption></figure>
+      <figure><img src="static/images/frames/libero_camera.jpg" alt="Camera viewpoint change" loading="lazy"><figcaption>Camera</figcaption></figure>
+      <figure><img src="static/images/frames/libero_noise.jpg" alt="Sensor noise" loading="lazy"><figcaption>Noise</figcaption></figure>
+      <figure><img src="static/images/frames/libero_background.jpg" alt="Background change" loading="lazy"><figcaption>Background</figcaption></figure>
+      <figure><img src="static/images/frames/libero_light.jpg" alt="Lighting change" loading="lazy"><figcaption>Light</figcaption></figure>
+      <figure><img src="static/images/frames/libero_robot.jpg" alt="Robot initial state change" loading="lazy"><figcaption>Robot</figcaption></figure>
+      <figure><img src="static/images/frames/libero_layout.jpg" alt="Object layout change" loading="lazy"><figcaption>Layout</figcaption></figure>
+      <figure><img src="static/images/frames/libero_language.jpg" alt="Rephrased instruction" loading="lazy"><figcaption>Language</figcaption></figure>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= §3 The loss ======================= -->
+<section class="part" id="measure">
+  <div class="col">
+    <p class="kicker"><span class="sec">§3</span>Does the training loss tell how well a policy generalizes?</p>
+    <h2>The loss mainly tracks in-domain success</h2>
+    <p>Closed-loop success is our main measure, but it needs rollouts and is measured only at the end of training.
+      To compare how fast spaces learn, every configuration is also trained on about 850 hours of real-robot data
+      from AgiBot World, and we compute its action flow-matching loss on held-out trajectories, the
+      <i>pretraining action loss</i>. How much does this loss say about success?</p>
+  </div>
+  <div class="fig wide reveal">
+    <div class="head">
+      <span class="title">Success against the pretraining action loss, 21 configurations</span>
+      <span class="toggle" data-for="measure">
+        <button data-v="clean" class="on">RoboTwin, clean</button>
+        <button data-v="random">RoboTwin, randomized</button>
+        <button data-v="plus">LIBERO-Plus</button>
+      </span>
+    </div>
+    <div class="chart" id="fig-measure"></div>
+    <div class="legend" id="leg-measure"></div>
+    <p class="cap col">Filled: a space alone; open: two spaces coupled without alignment, colored by the primary
+      space. Line: least-squares fit. Switching from clean to randomized scenes, the points spread out and the
+      correlation weakens.</p>
+  </div>
+  <div class="col">
+    <p>Across six spaces alone and 15 couplings that train without alignment, the loss correlates strongly with
+      in-domain success and more weakly with out-of-domain success. FLUX.2 AE and SigLIP&nbsp;2 differ by only 1%
+      in loss, yet succeed in 1% and 16% of randomized episodes. The loss is computed on held-out trajectories from
+      the training distribution, so like in-domain success it reflects how well a policy fits that distribution,
+      not how robust it is to a shift.</p>
+    <div class="takeaway"><b>Takeaway 1.</b> Measure generalization out of domain: the action loss mainly tracks
+      in-domain success. We use the loss only for in-distribution comparisons, such as learning speed.</div>
+  </div>
+</section>
+
+<!-- ======================= §4 Single spaces ======================= -->
+<section class="part" id="represent">
+  <div class="col">
+    <p class="kicker"><span class="sec">§4</span>Which visual space makes a better state?</p>
+    <h2>Representation latents, most of all out of domain</h2>
+    <p>In clean RoboTwin scenes, the four representation latents succeed in 79.7% to 84.3% of episodes, the two
+      reconstruction latents in 72.0% and 76.6%. Under domain randomization the two groups split apart: the
+      reconstruction latents fall to 1%, while the representation latents keep 6% to 22%.</p>
+  </div>
+  <div class="fig wide reveal">
+    <div class="head">
+      <span class="title">From in domain to out of domain</span>
+      <span class="toggle" data-for="gap">
+        <button data-v="robotwin" class="on">RoboTwin 2.0</button>
+        <button data-v="libero">LIBERO</button>
+      </span>
+    </div>
+    <div class="chart" id="fig-gap"></div>
+    <div class="legend"><span><i class="ring" style="border-color:#5e6773"></i>in domain</span><span><i style="background:#5e6773"></i>out of domain</span></div>
+    <p class="cap col">Each line runs from a space's in-domain success to its out-of-domain success.
+      RoboTwin&nbsp;2.0: clean, then randomized scenes. LIBERO: the original tasks, then LIBERO-Plus.</p>
+  </div>
+  <div class="col">
+    <h4>Where the gap comes from</h4>
+    <p>LIBERO-Plus changes one factor at a time. The gap is largest under changes of background, lighting, and
+      sensor noise, and smaller under changes of camera viewpoint, object layout, and language; under changes of
+      the robot's initial state, Wan VAE succeeds more often than every representation latent. To redraw the
+      image, a reconstruction latent must encode background, lighting, and noise, so changes in these factors
+      alter its state even though the task is unchanged.</p>
+  </div>
+  <div class="fig wide reveal">
+    <div class="head"><span class="title">LIBERO-Plus success by perturbation category</span></div>
+    <div class="chart" id="fig-cats"></div>
+    <div class="legend" id="leg-cats"></div>
+    <p class="cap col">Squares: reconstruction latents; circles: representation latents. Hover a row to compare
+      the six spaces under one perturbation.</p>
+  </div>
+  <div class="col">
+    <p>Most representation latents also learn faster: V-JEPA&nbsp;2.1 reaches the loss that Wan VAE has after
+      40,000 steps in 27,600 steps, 1.45 times as fast. We build on V-JEPA&nbsp;2.1 from here on. It learns
+      fastest, succeeds most often in clean scenes, and second most often in randomized scenes, behind
+      VGGT-Ω, whose encoder slows each policy call from 427 to 550&nbsp;ms.</p>
+    <div class="takeaway"><b>Takeaway 2.</b> Represent, don't reconstruct: representation latents make a better
+      state than the reconstruction latents that world–action models inherit, predominantly out of domain.</div>
+  </div>
+</section>
+
+<!-- ======================= §5 Two spaces ======================= -->
+<section class="part" id="align">
+  <div class="col">
+    <p class="kicker"><span class="sec">§5</span>How should a second space enter the model?</p>
+    <h2>As a training target, not as an input</h2>
+    <p>No single space is best everywhere: V-JEPA&nbsp;2.1 trails other spaces when the background or the camera
+      viewpoint changes, and even Wan VAE beats it when the robot's initial state changes. We therefore couple
+      V-JEPA&nbsp;2.1 with a second space&nbsp;<i>B</i>. The five couplings fall into two families: aligning
+      couplings use <i>B</i> only as a training target, input couplings also read it.</p>
+  </div>
+  <div class="fig wide reveal">
+    <table class="couplings" id="couplings">
+      <thead><tr><th>Coupling</th><th>What it does</th><th class="c"><i>B</i> as a target</th><th class="c"><i>B</i> as an input</th><th class="c"><i>B</i>'s encoder at inference</th><th class="c">Training compute per step</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <p class="cap col">Each coupling has one hyperparameter, tuned once on Wan VAE with DINOv3 and reused for every
+      pair. Training compute is relative to a single space, without the frozen encoders.</p>
+  </div>
+  <div class="col">
+    <p>In domain, the couplings differ little: every one succeeds in 82.4% to 87.4% of episodes, within about three
+      points of V-JEPA&nbsp;2.1 alone. Out of domain, the two families separate.</p>
+  </div>
+  <div class="fig wide reveal">
+    <div class="head">
+      <span class="title">Input couplings follow the second space; aligning couplings do not</span>
+    </div>
+    <div class="chart" id="fig-pairs"></div>
+    <div class="legend" id="leg-pairs"></div>
+    <p class="cap col">Success in randomized RoboTwin scenes of V-JEPA&nbsp;2.1 coupled with each second space,
+      against the success of that space alone. Lines: the mean of each family; faint dots: the single couplings,
+      named on hover.</p>
+  </div>
+  <div class="col">
+    <p>With every second space, REPA and Feature Forcing succeed in 25.4% to 35.8% of randomized episodes, above
+      V-JEPA&nbsp;2.1 alone (20.5%), even with Wan VAE, which alone succeeds in 1.0%. The input couplings read
+      <i>B</i> at inference, so their success rises and falls with that of <i>B</i>: with Wan VAE, Fusion and
+      Joint Attention fall to 2.4% and 4.1%. Paired with itself, V-JEPA&nbsp;2.1 gains 10.6 points under Feature
+      Forcing, so predicting a space and conditioning on the prediction helps on its own, and a different second
+      space adds 1.9 to 4.7 points more.</p>
+    <p>LIBERO-Plus shows that the aligned model attains the strengths of both spaces. Aligned to Wan VAE by
+      Feature Forcing, V-JEPA&nbsp;2.1 exceeds both spaces in all seven categories: under background changes,
+      where it is weak alone (67.0% against 41.6%), and under initial-state changes, where Wan VAE is the stronger
+      space (57.7% against 48.4%).</p>
+  </div>
+  <div class="fig wide reveal">
+    <div class="head"><span class="title">LIBERO-Plus: V-JEPA 2.1 aligned to Wan VAE</span></div>
+    <div class="chart" id="fig-aligned"></div>
+    <div class="legend" id="leg-aligned"></div>
+  </div>
+  <div class="col">
+    <p>We recommend Feature Forcing. It succeeds most often out of domain in every pair and runs only the primary
+      encoder at inference, for a third more training compute and one extra forward pass of the world Transformer.
+      REPA adds almost no compute and suits a tighter budget.</p>
+    <div class="takeaway"><b>Takeaway 3.</b> Align to a second space: it helps as a training target rather than as
+      an input, and as a target it lets the model attain the strengths of both spaces.</div>
+  </div>
+</section>
+
+<!-- ======================= §6 Scale ======================= -->
+<section class="part" id="scale">
+  <div class="col">
+    <p class="kicker"><span class="sec">§6</span>Does the recipe hold at scale?</p>
+    <h2>After 24,000 hours of pretraining, it still leads</h2>
+    <p>We pretrain three models on about 24,000 hours of bimanual manipulation from ten dual-arm embodiments,
+      mostly teleoperated on real robots: Wan VAE, V-JEPA&nbsp;2.1, and V-JEPA&nbsp;2.1 aligned to Wan VAE by
+      Feature Forcing. They share the architecture, are trained from scratch for 300,000 steps, and are then
+      fine-tuned on each benchmark; none of the benchmarks is in the pretraining data.</p>
+  </div>
+  <div class="fig wide reveal">
+    <div class="head"><span class="title">Pretraining data: 24,454 hours from ten embodiments</span></div>
+    <div class="chart" id="fig-data"></div>
+  </div>
+  <div class="col">
+    <p>The coupled model succeeds most often of the three on every benchmark. Among published policies, it achieves
+      state-of-the-art results on RoboTwin&nbsp;2.0, RoboCasa, and RoboDojo, and comes within two points of the best
+      policy on LIBERO-Plus and LIBERO-PRO.</p>
+  </div>
+  <div class="fig wide reveal">
+    <div class="numbers">
+      <div class="number"><div class="v">65.3<small>%</small></div><div class="k">RoboTwin 2.0, randomized scenes</div><div class="vs">best published: 62.6%</div></div>
+      <div class="number"><div class="v">68.5<small>%</small></div><div class="k">RoboCasa, 24 tasks</div><div class="vs">best published: 67.6%</div></div>
+      <div class="number"><div class="v">17.6</div><div class="k">RoboDojo, leaderboard score</div><div class="vs">best published: 17.2</div></div>
+    </div>
+  </div>
+  <div class="fig wide reveal">
+    <div class="head">
+      <span class="title" id="sota-title">Fine-tuned after pretraining, among published policies</span>
+      <span class="toggle" data-for="sota" id="sota-toggle"></span>
+    </div>
+    <div class="chart" id="fig-sota"></div>
+    <div class="legend" id="leg-sota"></div>
+    <p class="cap col">Published policies as reported by PrismWAM and as collected by SLA.</p>
+  </div>
+  <div class="col">
+    <h4>On a real robot</h4>
+    <p>On a dual-arm Franka robot whose embodiment is absent from pretraining, each model is fine-tuned on 46 and
+      50 teleoperated demonstrations of two tasks. From new initial positions, the coupled model inserts the test
+      tube in 7 of 10 trials, against 2 of 10 for π<sub>0.5</sub> fine-tuned from its released weights on the same
+      demonstrations.</p>
+  </div>
+  <div class="fig wide reveal photos">
+    <img src="static/images/tube-photos.jpg" width="1600" height="352" loading="lazy" alt="Test-tube insertion on the real robot">
+    <img src="static/images/screw-photos.jpg" width="1600" height="352" loading="lazy" alt="Picking up screws on the real robot">
+  </div>
+  <div class="fig wide reveal">
+    <div class="head"><span class="title">Real-robot success</span></div>
+    <div class="chart" id="fig-real"></div>
+    <div class="legend" id="leg-real"></div>
+  </div>
+  <div class="col">
+    <div class="takeaway"><b>Takeaway 4.</b> Scale the recipe: a representation latent aligned to a second space
+      by Feature Forcing keeps its gains after pretraining on about 24,000 hours of robot data.</div>
+  </div>
+</section>
+
+<!-- ======================= FAQ ======================= -->
+<section class="part col faq" id="faq">
+  <p class="kicker">Common questions</p>
+  <h2>FAQ</h2>
+  <details><summary>Why train every model from scratch?</summary>
+    <p>A model initialized from a video generator starts in that generator's latent space, which favors the
+      generator's own latents: initializing from Wan weights lowers the pretraining action loss of Wan VAE by 8.3%.
+      Training every configuration from scratch compares the spaces themselves.</p></details>
+  <details><summary>Why project the representation features to 32 channels?</summary>
+    <p>A frozen PCA needs no training, while a learned compressor adds its own design and training choices and may
+      compress some encoders better than others. In our pilots, PCA performs as well as a learned 32-channel S-VAE.
+      The reconstruction latents keep their native form.</p></details>
+  <details><summary>Why not compare the spaces by the loss?</summary>
+    <p>The loss mainly tracks in-domain success (§3). Two spaces can differ by 1% in loss and by 15 points in
+      out-of-domain success, so generalization is judged in closed loop, out of domain.</p></details>
+  <details><summary>Why V-JEPA 2.1 as the primary space?</summary>
+    <p>It learns fastest, succeeds most often in clean RoboTwin scenes, and second most often in randomized ones.
+      VGGT-Ω, which leads there, makes every policy call slower (550 against 427&nbsp;ms).</p></details>
+  <details><summary>What does Feature Forcing cost?</summary>
+    <p>A third more training compute per step and, at inference, one extra forward pass of the world Transformer
+      to predict the second space. The second space's encoder never runs at inference.</p></details>
+  <details><summary>How many training seeds?</summary>
+    <p>Each result comes from a single training run, with the same seed throughout. Differences of a few points
+      between configurations should be read with that in mind.</p></details>
+</section>
+
+<section class="part col" id="bibtex">
+  <p class="kicker">Citation</p>
+  <h2>BibTeX</h2>
+<pre><code>@article{dong2026exploring,
+  title   = {Exploring Visual Representations for World--Action Models},
+  author  = {Dong, Jiacheng and Chen, Lin-Zhuo and Xu, Fangyi and Zhang, Jiayi and Zheng, Kecheng and Xu, Yinghao},
+  journal = {arXiv preprint},
+  year    = {2026}
+}</code></pre>
+</section>
+
+<footer>© 2026 The authors · Last updated November 2026</footer>
+
+</main>
+</div>
+
+<div class="tip" id="tip"></div>
+<script src="static/js/data.js"></script>
+<script src="static/js/viz.js"></script>
+<script src="static/js/main.js"></script>
+</body>
+</html>
