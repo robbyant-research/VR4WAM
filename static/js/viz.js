@@ -2,12 +2,18 @@
 "use strict";
 
 const NS = "http://www.w3.org/2000/svg";
-const INK = "#1d2830", MUTED = "#5e6773", FAINT = "#8a929c", GRID = "#eceef1", BASE = "#c9ced4";
+// Neutral colors are the page's CSS variables, so that the charts follow the light and dark themes.
+const INK = "var(--ink)", MUTED = "var(--muted)", FAINT = "var(--faint)", GRID = "var(--grid)", BASE = "var(--base)";
 const SPACE = Object.fromEntries(SPACES.map(s => [s.key, s]));
 
 function el(tag, attrs = {}, parent = null) {
   const e = document.createElementNS(NS, tag);
-  for (const [k, v] of Object.entries(attrs)) if (v !== undefined && v !== null) e.setAttribute(k, v);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (v === undefined || v === null) continue;
+    // A theme color is a CSS variable, which not every browser resolves in an SVG attribute: set it as a style.
+    if ((k === "fill" || k === "stroke") && typeof v === "string" && v.startsWith("var(")) e.style.setProperty(k, v);
+    else e.setAttribute(k, v);
+  }
   if (parent) parent.appendChild(e);
   return e;
 }
@@ -78,7 +84,7 @@ function drawModel() {
   el("path", { d: "M0,1 L9,5 L0,9 z", fill: MUTED }, m);
   const arrow = (x1, y1, x2, y2, dash) => el("line", { x1, y1, x2, y2, stroke: MUTED, "stroke-width": 1.4, "marker-end": "url(#arr)", "stroke-dasharray": dash ? "4 3" : null }, svg);
 
-  const part = (x, y, w, h, title, sub, note, fill = "#fff") => {
+  const part = (x, y, w, h, title, sub, note, fill = "var(--paper)") => {
     const g = el("g", { class: "part-node", style: "cursor:help" }, svg);
     el("rect", { x, y, width: w, height: h, rx: 9, fill, stroke: INK, "stroke-width": 1.3 }, g);
     text(g, x + w / 2, y + h / 2 + (sub ? -3 : 5), title, { "text-anchor": "middle", "font-size": 14.5, "font-weight": 600, fill: INK });
@@ -92,23 +98,23 @@ function drawModel() {
   frames.forEach(([f, lab], i) => {
     const x = 18 + i * 78, y = 52;
     if (i > 0) { // three blank sheets behind each future block
-      for (let k = 3; k >= 1; k--) el("rect", { x: x - k * 3, y: y - k * 3, width: 70, height: 55, rx: 3, fill: "#fff", stroke: BASE }, svg);
+      for (let k = 3; k >= 1; k--) el("rect", { x: x - k * 3, y: y - k * 3, width: 70, height: 55, rx: 3, fill: "var(--paper)", stroke: BASE }, svg);
     }
     el("image", { href: `static/images/frames/${f}.jpg`, x, y, width: 70, height: 55, preserveAspectRatio: "xMidYMid slice" }, svg);
-    el("rect", { x, y, width: 70, height: 55, rx: 3, fill: "none", stroke: "#9aa1aa" }, svg);
+    el("rect", { x, y, width: 70, height: 55, rx: 3, fill: "none", stroke: "var(--soft-line)" }, svg);
     text(svg, x + 35, y + 72, lab, { "text-anchor": "middle", "font-size": 12, fill: MUTED });
   });
   text(svg, 18, 30, "One window: 33 frames, every fourth encoded", { "font-size": 12, fill: FAINT });
 
   const noteEnc = `<div class="t">Frozen encoder</div><div class="m">Maps the frames to the visual space under study:<br>the current state and two future states (blocks of four frames).<br>The only part that changes between configurations.</div>`;
-  part(254, 54, 136, 58, "Encoder ❄", "the space under study", noteEnc, "#f6f2fd");
+  part(254, 54, 136, 58, "Encoder ❄", "the space under study", noteEnc, "var(--enc)");
   arrow(242, 83, 252, 83);
 
   // states
   const st = [["current", 410], ["future", 454], ["future", 498]];
   st.forEach(([lab, x], i) => {
     const g = el("g", {}, svg);
-    el("rect", { x, y: 66, width: 34, height: 34, rx: 6, fill: i ? "#fff" : "#e7defa", stroke: "#7b45c2", "stroke-width": 1.3, "stroke-dasharray": i ? "3 2" : null }, g);
+    el("rect", { x, y: 66, width: 34, height: 34, rx: 6, fill: i ? "var(--paper)" : "var(--enc-strong)", stroke: "#7b45c2", "stroke-width": 1.3, "stroke-dasharray": i ? "3 2" : null }, g);
     text(g, x + 17, 120, lab, { "text-anchor": "middle", "font-size": 11.5, fill: MUTED });
   });
   arrow(390, 83, 406, 83);
@@ -173,7 +179,7 @@ function chartMeasure() {
     if (nodes.has(k)) return;
     const g = el("g", { class: "mark" }, gPts);
     const s = SPACE[d.p];
-    if (d.coupling) el("circle", { r: 5.2, fill: "#fff", stroke: s.color, "stroke-width": 2 }, g);
+    if (d.coupling) el("circle", { r: 5.2, fill: "var(--paper)", stroke: s.color, "stroke-width": 2 }, g);
     else el("circle", { r: 7, fill: s.fill, stroke: s.color, "stroke-width": 1.5 }, g);
     el("circle", { r: 11, class: "hit" }, g);
     nodes.set(k, { g, d });
@@ -198,7 +204,7 @@ function chartMeasure() {
     const n = data.length, mx = data.reduce((a, d) => a + d.loss, 0) / n, my = data.reduce((a, d) => a + d[view.f], 0) / n;
     const b = data.reduce((a, d) => a + (d.loss - mx) * (d[view.f] - my), 0) / data.reduce((a, d) => a + (d.loss - mx) ** 2, 0);
     gFit.innerHTML = "";
-    el("line", { x1: x(7.6), y1: y(my + b * (7.6 - mx)), x2: x(9.0), y2: y(my + b * (9.0 - mx)), stroke: "#9aa0a8", "stroke-width": 1.5, "clip-path": "url(#clipM)" }, gFit);
+    el("line", { x1: x(7.6), y1: y(my + b * (7.6 - mx)), x2: x(9.0), y2: y(my + b * (9.0 - mx)), stroke: "var(--soft-line)", "stroke-width": 1.5, "clip-path": "url(#clipM)" }, gFit);
     nodes.forEach(({ g, d }, k) => {
       const dd = data.find(e => keyOf(e) === k);
       if (!dd) { g.style.opacity = 0; g.style.pointerEvents = "none"; return; }
@@ -239,7 +245,7 @@ function chartGap() {
     const g = el("g", {}, svg);
     text(g, L - 14, cy + 4, s.name, { "text-anchor": "end", "font-size": 13.5, fill: INK, "font-weight": 500 });
     const line = el("line", { y1: cy, y2: cy, stroke: s.color, "stroke-width": 2.5, "stroke-linecap": "round", class: "mark" }, g);
-    const a = el("circle", { cy: 0, r: 6.5, fill: "#fff", stroke: s.color, "stroke-width": 2, class: "mark" }, g);
+    const a = el("circle", { cy: 0, r: 6.5, fill: "var(--paper)", stroke: s.color, "stroke-width": 2, class: "mark" }, g);
     const b = el("circle", { cy: 0, r: 7, fill: s.color, class: "mark" }, g);
     const la = text(g, 0, cy - 11, "", { "text-anchor": "middle", "font-size": 11.5, fill: MUTED, class: "mark" });
     const lb = text(g, 0, cy - 11, "", { "text-anchor": "middle", "font-size": 11.5, fill: INK, "font-weight": 600, class: "mark" });
@@ -288,23 +294,23 @@ function chartCats() {
     el("rect", { x: 8, y: cy - rowH / 2, width: W - 16, height: rowH, fill: "transparent", class: "rowbg" }, g);
     text(g, L - 14, cy + 4, r.c, { "text-anchor": "end", "font-size": 13.5, fill: INK, "font-weight": 500 });
     const mr = groupMean(recon, r.i), mp = groupMean(repr, r.i);
-    el("line", { x1: x(Math.min(mr, mp)), x2: x(Math.max(mr, mp)), y1: cy, y2: cy, stroke: mp >= mr ? "#d9c8f3" : "#f6d8a8", "stroke-width": 9, "stroke-linecap": "round" }, g);
+    el("line", { x1: x(Math.min(mr, mp)), x2: x(Math.max(mr, mp)), y1: cy, y2: cy, stroke: mp >= mr ? "var(--gap-up)" : "var(--gap-down)", "stroke-width": 9, "stroke-linecap": "round" }, g);
     [...recon, ...repr].forEach(k => {
       const s = SPACE[k], v = PLUS_BY_CATEGORY[k][r.i];
       if (s.kind === "recon") el("rect", { x: x(v) - 6, y: cy - 6, width: 12, height: 12, rx: 2, fill: s.fill, stroke: s.color, "stroke-width": 1.5 }, g);
       else el("circle", { cx: x(v), cy, r: 6.5, fill: s.fill, stroke: s.color, "stroke-width": 1.5 }, g);
     });
     const gap = mp - mr;
-    text(g, W - R + 16, cy + 4, (gap >= 0 ? "+" : "−") + fmt(Math.abs(gap)), { "font-size": 12.5, "font-weight": 600, fill: gap >= 0 ? "#6e3fae" : "#b0650a" });
+    text(g, W - R + 16, cy + 4, (gap >= 0 ? "+" : "−") + fmt(Math.abs(gap)), { "font-size": 12.5, "font-weight": 600, fill: gap >= 0 ? "var(--accent)" : "var(--neg)" });
     hover(g, () => `<div class="t">${r.c}: changes the ${CATEGORY_ABOUT[r.c]}</div>` +
       [...recon, ...repr].map(k => `<div class="m">${SPACE[k].name}: ${fmt(PLUS_BY_CATEGORY[k][r.i])}%</div>`).join("") +
       `<div class="m" style="margin-top:3px">representation mean − reconstruction mean: ${gap >= 0 ? "+" : "−"}${fmt(Math.abs(gap))}</div>`);
-    g.addEventListener("mouseenter", () => g.querySelector(".rowbg").setAttribute("fill", "#f7f8fa"));
-    g.addEventListener("mouseleave", () => g.querySelector(".rowbg").setAttribute("fill", "transparent"));
+    g.addEventListener("mouseenter", () => g.querySelector(".rowbg").style.fill = "var(--hover)");
+    g.addEventListener("mouseleave", () => g.querySelector(".rowbg").style.fill = "transparent");
   });
   legend("leg-cats", [
     ...SPACES.map(s => [s.kind === "recon" ? "sq" : "", s.fill, s.name]),
-    ["line", "#d9c8f3", "between the two group means"],
+    ["line", "var(--gap-up)", "between the two group means"],
   ]);
 }
 
@@ -327,13 +333,13 @@ function chartPairs() {
   const pairs = PAIRS.filter(p => p.second !== "vjepa");   // the self-pair is a control, discussed in the text
   const FAM = {
     aligning: { name: "B as a training target", members: "REPA, Feature Forcing", color: "#D47A06" },
-    input: { name: "B as an input", members: "Fusion, Joint Attention, Multi-expert", color: "#5B6878" },
+    input: { name: "B as an input", members: "Fusion, Joint Attention, Multi-expert", color: "var(--input-fam)" },
   };
   const gGrid = el("g", { class: "grid" }, svg), gAx = el("g", { class: "axis" }, svg);
   const gRef = el("g", {}, svg), gLines = el("g", {}, svg), gPts = el("g", {}, svg), gLab = el("g", {}, svg);
   const yLab = text(gAx, 16, (T + H - B) / 2, "", { "text-anchor": "middle", class: "lbl", transform: `rotate(-90 16 ${(T + H - B) / 2})` });
   text(gAx, (L + W - R) / 2, H - 8, "Second space alone (%)", { "text-anchor": "middle", class: "lbl" });
-  const diag = el("line", { stroke: "#c3c8ce", "stroke-width": 1.2, "stroke-dasharray": "4 4" }, gRef);
+  const diag = el("line", { stroke: "var(--ref)", "stroke-width": 1.2, "stroke-dasharray": "4 4" }, gRef);
   const vline = el("line", { x1: L, x2: W - R, stroke: "#7b45c2", "stroke-width": 1.6, "stroke-dasharray": "6 4" }, gRef);
   const vlab = text(gRef, L + 6, 0, "", { "font-size": 12, fill: "#7b45c2", "font-weight": 600 });
 
@@ -348,7 +354,7 @@ function chartPairs() {
   const means = { aligning: [], input: [] };
   Object.keys(FAM).forEach(f => pairs.forEach(p => {
     const g = el("g", { class: "mark" }, gLab);
-    el("circle", { r: 6.5, fill: FAM[f].color, stroke: "#fff", "stroke-width": 2 }, g);
+    el("circle", { r: 6.5, fill: FAM[f].color, stroke: "var(--paper)", "stroke-width": 2 }, g);
     el("circle", { r: 11, class: "hit" }, g);
     means[f].push({ g, p });
   }));
@@ -409,7 +415,7 @@ function chartPairs() {
   update(1);
   legend("leg-pairs", [
     ["", FAM.aligning.color, "mean of the aligning couplings"], ["", FAM.input.color, "mean of the input couplings"],
-    ["dash", "#7b45c2", "V-JEPA 2.1 alone"], ["dash", "#c3c8ce", "as good as the second space alone"],
+    ["dash", "#7b45c2", "V-JEPA 2.1 alone"], ["dash", "var(--ref)", "as good as the second space alone"],
   ]);
   return { update };
 }
@@ -431,7 +437,7 @@ function chartAligned() {
     const cy = T + j * rowH + rowH / 2 + 4, g = el("g", {}, svg);
     const w = PLUS_BY_CATEGORY.wan[i], v = PLUS_BY_CATEGORY.vjepa[i], f = PLUS_ALIGNED_TO_WAN.ff[i];
     text(g, L - 14, cy + 4, CATEGORIES[i], { "text-anchor": "end", "font-size": 13.5, fill: INK, "font-weight": 500 });
-    el("line", { x1: x(Math.min(w, v)), x2: x(Math.max(f, w, v)), y1: cy, y2: cy, stroke: "#dfe2e6", "stroke-width": 2 }, g);
+    el("line", { x1: x(Math.min(w, v)), x2: x(Math.max(f, w, v)), y1: cy, y2: cy, stroke: "var(--track)", "stroke-width": 2 }, g);
     el("rect", { x: x(w) - 6, y: cy - 6, width: 12, height: 12, rx: 2, fill: SPACE.wan.fill, stroke: SPACE.wan.color, "stroke-width": 1.5 }, g);
     el("circle", { cx: x(v), cy, r: 6.5, fill: SPACE.vjepa.fill, stroke: SPACE.vjepa.color, "stroke-width": 1.5 }, g);
     el("path", { d: `M${x(f)},${cy - 8} L${x(f) + 8},${cy} L${x(f)},${cy + 8} L${x(f) - 8},${cy} z`, fill: INK }, g);
@@ -490,7 +496,7 @@ function chartSota() {
     rows.forEach((r, i) => {
       const cy = T + i * rowH + rowH / 2, g = el("g", {}, svg);
       text(g, L - 10, cy + 4, r.name, { "text-anchor": "end", "font-size": 13, fill: r.ours ? INK : MUTED, "font-weight": r.ours ? 600 : 400 });
-      const fill = r.ours ? (r.ours.hatch ? "url(#hatch)" : r.ours.color) : "#dfe5ef";
+      const fill = r.ours ? (r.ours.hatch ? "url(#hatch)" : r.ours.color) : "var(--pub)";
       const bar = el("rect", { x: L, y: cy - 8, width: Math.max(x(r.v) - L, 1), height: 16, rx: 3, fill, class: "growbar" }, g);
       bar.style.animationDelay = (i * 25) + "ms";
       text(g, x(r.v) + 6, cy + 4, fmt(r.v), { "font-size": 12, fill: r.ours ? INK : MUTED, "font-weight": r.ours ? 700 : 400 });
@@ -499,13 +505,13 @@ function chartSota() {
     });
   }
   update(BENCHMARKS[0].key);
-  legend("leg-sota", [["sq", "#dfe5ef", "published policies"], ["sq", "#f5a83d", "Wan VAE"], ["sq", "#a48ce6", "V-JEPA 2.1"], ["sq", "#7b45c2", "V-JEPA 2.1 + Wan VAE (Feature Forcing)"]]);
+  legend("leg-sota", [["sq", "var(--pub)", "published policies"], ["sq", "#f5a83d", "Wan VAE"], ["sq", "#a48ce6", "V-JEPA 2.1"], ["sq", "#7b45c2", "V-JEPA 2.1 + Wan VAE (Feature Forcing)"]]);
   return { update };
 }
 
 // §6 real robot
 function chartReal() {
-  const models = [["wan", "Wan VAE", "#f5a83d"], ["vjepa", "V-JEPA 2.1", "#a48ce6"], ["ff", "V-JEPA 2.1 + Wan VAE", "#7b45c2"], ["pi05", "π0.5", "#c3cad5"]];
+  const models = [["wan", "Wan VAE", "#f5a83d"], ["vjepa", "V-JEPA 2.1", "#a48ce6"], ["ff", "V-JEPA 2.1 + Wan VAE", "#7b45c2"], ["pi05", "π0.5", "var(--pi)"]];
   const W = 880, H = 270, L = 48, R = 10, T = 16, B = 46;
   const svg = svgRoot(document.getElementById("fig-real"), W, H, "Real-robot success");
   const y = lin(0, 100, H - B, T), gw = (W - L - R) / REAL.length, bw = 30;

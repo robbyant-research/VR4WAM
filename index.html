@@ -8,12 +8,26 @@
   <meta property="og:title" content="Exploring Visual Representations for World–Action Models">
   <meta property="og:description" content="A controlled study of the visual state of world–action models, scaled to 24,000 hours of robot data.">
   <meta property="og:image" content="static/images/teaser-poster.jpg">
+  <script>
+    // The theme is set before the page draws: the reader's earlier choice, else the system's setting.
+    (function () {
+      var t = null;
+      try { t = localStorage.getItem("theme"); } catch (e) {}
+      if (t !== "dark" && t !== "light") t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      document.documentElement.setAttribute("data-theme", t);
+    })();
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="static/css/style.css">
 </head>
 <body>
+
+<button class="theme-toggle" type="button" aria-label="Switch between light and dark mode" title="Light / dark mode">
+  <svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
+  <svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></svg>
+</button>
 
 <div class="page">
 
@@ -195,7 +209,7 @@
       </span>
     </div>
     <div class="chart" id="fig-gap"></div>
-    <div class="legend"><span><i class="ring" style="border-color:#5e6773"></i>in domain</span><span><i style="background:#5e6773"></i>out of domain</span></div>
+    <div class="legend"><span><i class="ring" style="border-color:var(--muted)"></i>in domain</span><span><i style="background:var(--muted)"></i>out of domain</span></div>
     <p class="cap col">Each line runs from a space's in-domain success to its out-of-domain success.
       RoboTwin&nbsp;2.0: clean, then randomized scenes. LIBERO: the original tasks, then LIBERO-Plus.</p>
   </div>
@@ -233,6 +247,12 @@
       viewpoint changes, and even Wan VAE beats it when the robot's initial state changes. We therefore couple
       V-JEPA&nbsp;2.1 with a second space&nbsp;<i>B</i>. The five couplings fall into two families: aligning
       couplings use <i>B</i> only as a training target, input couplings also read it.</p>
+  </div>
+  <div class="fig wide reveal">
+    <img class="schematic" src="static/images/couplings.svg" width="2025" height="397" loading="lazy"
+      alt="The five couplings: how the model of the primary space A uses the second space B">
+    <p class="cap col">How the model of the primary space <i>A</i> uses the second space <i>B</i> in each coupling
+      (dashed: training only).</p>
   </div>
   <div class="fig wide reveal">
     <table class="couplings" id="couplings">
@@ -365,8 +385,20 @@
 <section class="part col" id="acknowledgements">
   <p class="kicker">Thanks</p>
   <h2>Acknowledgements</h2>
-  <p>We thank Shangzhan Zhang, Siqiao Huang, Yihang Chen, Jian Gao, Yibin Yan, Jiaqi Liao, Weiyang Jin, Baiqiao Yin,
-    Yincheng Tian, Yuran Wang, Weili Xu, Zehong Shen, Feiyang Liu, and Qinlei Xie for helpful discussions and
+  <p class="ack">We thank <a href="https://zhanghe3z.github.io/" target="_blank" rel="noopener">Shangzhan Zhang</a>,
+    <a href="https://knightnemo.github.io/" target="_blank" rel="noopener">Siqiao Huang</a>,
+    <a href="https://sh17c.top/" target="_blank" rel="noopener">Yihang Chen</a>,
+    <a href="https://ygaojiany.github.io/" target="_blank" rel="noopener">Jian Gao</a>,
+    <a href="https://go2heart.github.io/" target="_blank" rel="noopener">Yibin Yan</a>,
+    <a href="https://curryx-001.github.io/" target="_blank" rel="noopener">Jiaqi Liao</a>,
+    <a href="https://waynejin0918.github.io/home/" target="_blank" rel="noopener">Weiyang Jin</a>,
+    <a href="https://yyyybq.github.io/" target="_blank" rel="noopener">Baiqiao Yin</a>,
+    <a href="https://tianyinchen56.github.io/" target="_blank" rel="noopener">Yinchen Tian</a>,
+    <a href="https://wayrise.github.io/" target="_blank" rel="noopener">Yuran Wang</a>,
+    <a href="https://weilixu.com/" target="_blank" rel="noopener">Weili Xu</a>,
+    <a href="https://zehongs.github.io/" target="_blank" rel="noopener">Zehong Shen</a>,
+    <a href="https://zaychikliu.github.io/" target="_blank" rel="noopener">Feiyang Liu</a>,
+    and <a href="https://qinlei-xie.github.io/" target="_blank" rel="noopener">Qinlei Xie</a> for helpful discussions and
     feedback.</p>
 </section>
 

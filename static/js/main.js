@@ -10,6 +10,18 @@ document.addEventListener("DOMContentLoaded", () => {
   chartReal();
   const charts = { measure: chartMeasure(), gap: chartGap(), pairs: chartPairs(), sota: chartSota() };
 
+  // light / dark: the toggle stores the reader's choice; without one, the page follows the system's setting
+  const root = document.documentElement;
+  const stored = () => { try { return localStorage.getItem("theme"); } catch (e) { return null; } };
+  document.querySelector(".theme-toggle").addEventListener("click", () => {
+    const next = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
+    root.setAttribute("data-theme", next);
+    try { localStorage.setItem("theme", next); } catch (e) {}
+  });
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", e => {
+    if (!stored()) root.setAttribute("data-theme", e.matches ? "dark" : "light");
+  });
+
   // segmented toggles: <span class="toggle" data-for="name"><button data-v="...">
   document.querySelectorAll(".toggle").forEach(tg => {
     tg.addEventListener("click", e => {
