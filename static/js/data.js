@@ -137,9 +137,9 @@ const EMBODIMENTS = [
 
 // After pretraining and fine-tuning (Figure 10, tables/pretraining-sota.tex): published policies as reported.
 const OURS = [
-  { key: "wan", name: "Wan VAE", color: "#F5A83D" },
-  { key: "vjepa", name: "V-JEPA 2.1", color: "#A48CE6" },
-  { key: "ff", name: "V-JEPA 2.1 + Wan VAE", color: "#7B45C2", hatch: true },
+  { key: "wan", name: "Ours (Wan VAE)", color: "#F5A83D" },
+  { key: "vjepa", name: "Ours (V-JEPA 2.1)", color: "#A48CE6" },
+  { key: "ff", name: "Ours (V-JEPA 2.1 + Wan VAE)", color: "#7B45C2", hatch: true },
 ];
 const BENCHMARKS = [
   { key: "c2r", name: "RoboTwin 2.0, randomized", unit: "success (%)",

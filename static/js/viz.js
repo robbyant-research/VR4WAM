@@ -479,7 +479,7 @@ function chartSota() {
       ...OURS.map(o => ({ name: o.name, v: bm.ours[o.key], ours: o })),
       ...Object.entries(bm.published).map(([name, v]) => ({ name, v })),
     ].sort((a, b) => b.v - a.v);
-    const W = 880, rowH = 26, T = 6, B = 40, L = 170, R = 56;
+    const W = 880, rowH = 26, T = 6, B = 40, L = 215, R = 56;   // L fits "Ours (V-JEPA 2.1 + Wan VAE)"
     const H = T + B + rows.length * rowH;
     const svg = svgRoot(host, W, H, bm.name);
     const max = key === "robodojo" ? 20 : 100, x = lin(0, max, L, W - R);
@@ -505,13 +505,13 @@ function chartSota() {
     });
   }
   update(BENCHMARKS[0].key);
-  legend("leg-sota", [["sq", "var(--pub)", "published policies"], ["sq", "#f5a83d", "Wan VAE"], ["sq", "#a48ce6", "V-JEPA 2.1"], ["sq", "#7b45c2", "V-JEPA 2.1 + Wan VAE (Feature Forcing)"]]);
+  legend("leg-sota", [["sq", "var(--pub)", "published policies"], ["sq", "#f5a83d", "Ours (Wan VAE)"], ["sq", "#a48ce6", "Ours (V-JEPA 2.1)"], ["sq", "#7b45c2", "Ours (V-JEPA 2.1 + Wan VAE)"]]);
   return { update };
 }
 
 // §6 real robot
 function chartReal() {
-  const models = [["wan", "Wan VAE", "#f5a83d"], ["vjepa", "V-JEPA 2.1", "#a48ce6"], ["ff", "V-JEPA 2.1 + Wan VAE", "#7b45c2"], ["pi05", "π0.5", "var(--pi)"]];
+  const models = [["wan", "Ours (Wan VAE)", "#f5a83d"], ["vjepa", "Ours (V-JEPA 2.1)", "#a48ce6"], ["ff", "Ours (V-JEPA 2.1 + Wan VAE)", "#7b45c2"], ["pi05", "π0.5", "var(--pi)"]];
   const W = 880, H = 270, L = 48, R = 10, T = 16, B = 46;
   const svg = svgRoot(document.getElementById("fig-real"), W, H, "Real-robot success");
   const y = lin(0, 100, H - B, T), gw = (W - L - R) / REAL.length, bw = 30;
